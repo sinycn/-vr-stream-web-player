@@ -37,9 +37,9 @@ WebVRConfig = {
   // Forces availability of VR mode.
   //FORCE_ENABLE_VR: true, // Default: false.
   // Complementary filter coefficient. 0 for accelerometer, 1 for gyro.
-  //K_FILTER: 0.98, // Default: 0.98.
+  // K_FILTER: 0.5, // Default: 0.98.
   // How far into the future to predict during fast motion.
-  //PREDICTION_TIME_S: 0.040, // Default: 0.040 (in seconds).
+  PREDICTION_TIME_S: 0.020, // Default: 0.040 (in seconds).
   // Flag to disable touch panner. In case you have your own touch controls
   //TOUCH_PANNER_DISABLED: true, // Default: false.
   // Enable yaw panning only, disabling roll and pitch. This can be useful for
@@ -50,7 +50,7 @@ WebVRConfig = {
   // Scales the recommended buffer size reported by WebVR, which can improve
   // performance. Making this very small can lower the effective resolution of
   // your scene.
-  BUFFER_SCALE: 0.5, // default: 1.0
+  BUFFER_SCALE: 2.0, // default: 1.0
   // Allow VRDisplay.submitFrame to change gl bindings, which is more
   // efficient if the application code will re-bind it's resources on the
   // next frame anyway.
@@ -65,12 +65,14 @@ WebVRConfig = {
 <!--
   A polyfill for Promises. Needed for IE and Edge.
   -->
-<script src="node_modules/es6-promise/dist/es6-promise.js"></script>
+<!-- <script src="node_modules/es6-promise/dist/es6-promise.js"></script> -->
 
 <!--
   three.js 3d library
   -->
-<script src="node_modules/three/three.js"></script>
+<script src="src/three.min.js"></script>
+
+<script src="src/stats.min.js"></script>
 
 <!--
   VRControls.js acquires positional information from connected VR devices and applies the transformations to a three.js camera object.
@@ -92,6 +94,10 @@ WebVRConfig = {
   -->
 <script src="build/webvr-manager.js"></script>
 
+<script src="src/jquery-3.1.1.min.js"></script>
+
+<video id="video" autoplay="true" loop="false" hidden="hidden" src="lol.mp4" muted="true">
+</video>
 
 <script>
 // Setup three.js WebGL renderer. Note: Antialiasing is a big performance hit.
@@ -116,34 +122,159 @@ controls.standing = true;
 var effect = new THREE.VREffect(renderer);
 effect.setSize(window.innerWidth, window.innerHeight);
 
-
 // Add a repeating grid as a skybox.
-var boxSize = 5;
-var loader = new THREE.TextureLoader();
-loader.load('img/box.png', onTextureLoaded);
+var boxSize = 1;
 
-function onTextureLoaded(texture) {
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(boxSize, boxSize);
+video = document.getElementById( 'video' );
 
-  var geometry = new THREE.BoxGeometry(boxSize, boxSize, boxSize);
+texture = new THREE.VideoTexture( video );
+texture.minFilter = THREE.LinearFilter;
+texture.magFilter = THREE.LinearFilter;
+texture.format = THREE.RGBFormat;
+
+// cubeFaceVertexUvs
+var originUv=[[new THREE.Vector2( 1, 1.0/2),new THREE.Vector2( 1,0),new THREE.Vector2(2.0/3, 1.0/2)],[new THREE.Vector2( 1, 0),new THREE.Vector2(2.0/3,0),new THREE.Vector2(2.0/3, 1.0/2)]];
+var originUvs=[];
+for(var i=0;i<12;i++){
+  var tUv=[];
+  var dx=(parseInt(i/2)%3)*1.0/3;
+  var dy=parseInt(i/6)*1.0/2;
+  var index=(i+1)%2;
+  // console.log(dx);
+  tUv[0] = new THREE.Vector2(originUv[index][0].x-dx, originUv[index][0].y+dy);
+  tUv[1] = new THREE.Vector2(originUv[index][1].x-dx, originUv[index][1].y+dy);
+  tUv[2] = new THREE.Vector2(originUv[index][2].x-dx, originUv[index][2].y+dy);
+
+  originUvs.push(tUv);
+}
+
+
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+
+  var geometry = new THREE.CubeGeometry(20, 20,20);
   var material = new THREE.MeshBasicMaterial({
     map: texture,
-    color: 0x01BE00,
+    color: 0xffffff,
     side: THREE.BackSide
   });
 
+  //* Place cubemap video faces in right places
+  for(var i=0;i<12;i++){
+    geometry.faceVertexUvs[0][11-i]=originUvs[i];
+  }
+  var temp1=geometry.faceVertexUvs[0][0];
+  var temp2=geometry.faceVertexUvs[0][1];
+  geometry.faceVertexUvs[0][0]=geometry.faceVertexUvs[0][2];
+  geometry.faceVertexUvs[0][1]=geometry.faceVertexUvs[0][3];
+  geometry.faceVertexUvs[0][2]=temp1;
+  geometry.faceVertexUvs[0][3]=temp2;
+
+  //* Cubemap video faces are expanded 1.01 by ffmpeg transform,fix them here.
+  function fixVU(geometry){
+  var fixP=0.002;
+  for(var i=0;i<12;i+=2){
+    geometry.faceVertexUvs[0][i][0].y-=fixP;
+    geometry.faceVertexUvs[0][i][2].y-=fixP;
+    geometry.faceVertexUvs[0][i][0].x-=fixP;
+    geometry.faceVertexUvs[0][i][1].x-=fixP;
+
+    geometry.faceVertexUvs[0][i][1].y+=fixP;
+    geometry.faceVertexUvs[0][i][2].x+=fixP;
+
+    geometry.faceVertexUvs[0][i+1][0].y+=fixP;
+    geometry.faceVertexUvs[0][i+1][1].y+=fixP;
+    geometry.faceVertexUvs[0][i+1][1].x+=fixP;
+    geometry.faceVertexUvs[0][i+1][2].x+=fixP;
+
+    geometry.faceVertexUvs[0][i+1][0].x-=fixP;
+    geometry.faceVertexUvs[0][i+1][2].y-=fixP;
+    }
+  }
+  fixVU(geometry);
+  
+
+  // geometry.faceVertexUvs[0][11]={}
   // Align the skybox to the floor (which is at y=0).
   skybox = new THREE.Mesh(geometry, material);
-  skybox.position.y = boxSize/2;
+  skybox.position.y = 1.5;
+  skybox.position.x = 0;
   scene.add(skybox);
 
   // For high end VR devices like Vive and Oculus, take into account the stage
   // parameters provided.
   setupStage();
+
+var plane_position=0;
+
+function addPlane(item) {
+
+  var img=item.pictures.img;
+  img=img.replace('http:/','/u');
+  var texture = new THREE.TextureLoader().load(img);
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+  // console.log(texture,plane_position);
+  var radio=1.5;
+  var planeWidth=0.4*radio;
+  var planeHeight=0.3*radio;
+  var planeSpan=0.05*radio;
+  var geometry = new THREE.PlaneGeometry(planeWidth,planeHeight);
+  
+  var material =new THREE.MeshBasicMaterial({
+    map: texture,
+    color: 0xffffff,
+    side: THREE.BackSide
+  });
+ 
+  var plane = new THREE.Mesh( geometry, material);
+  plane.name="plane_"+plane_position;
+  plane.data=item;
+  plane.position.set(1.5, controls.userHeight-0.5, 0.5);
+  plane.position.y+=(plane_position%4)*(planeHeight+planeSpan);
+  plane.position.z=parseInt(plane_position/4)*(planeWidth+planeSpan);
+  plane_position+=1;
+  plane.rotation.y=Math.PI/2;
+  scene.add(plane);
+
+  if(!playing){
+    playing=true;
+    playRoom(item);
+  }
+}
+var liveItems;
+function getPlanesData(){
+  var url="/u/api.m.panda.tv/ajax_get_live_list_by_cate?cate=lol&pageno=0&pagenum=12&__plat=h5";
+  $.getJSON(url,'',function(json){
+    var items=json.data.items;
+    liveItems=items;
+    for(var i=0;i<items.length;i++){
+      var item=items[i];
+      addPlane(item);
+    }
+  });
+}
+getPlanesData();
+
+
+var raycaster = new THREE.Raycaster();
+var mouse = new THREE.Vector2();
+
+var select=false;
+var playing=false;
+
+function onMouseMove( event ) {
+
+  // calculate mouse position in normalized device coordinates
+  // (-1 to +1) for both components
+
+  mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+  mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+  select=true;
 }
 
+window.addEventListener( 'mouseup', onMouseMove, false );
 
 // Create a VR manager helper to enter and exit VR mode.
 var params = {
@@ -161,7 +292,7 @@ var cube = new THREE.Mesh(geometry, material);
 cube.position.set(0, controls.userHeight, -1);
 
 // Add cube mesh to your three.js scene
-scene.add(cube);
+// scene.add(cube);
 
 // Kick off animation loop
 requestAnimationFrame(animate);
@@ -181,6 +312,25 @@ function animate(timestamp) {
   // Update VR headset position and apply to camera.
   controls.update();
 
+ 
+
+  // update the picking ray with the camera and mouse position  
+  raycaster.setFromCamera( mouse, camera ); 
+
+ // calculate objects intersecting the picking ray
+  var intersects = raycaster.intersectObjects( scene.children );
+
+  if(select){
+    select=false;
+    for ( var i = 0; i < intersects.length; i++ ) {
+      var object=intersects[ i ].object;
+      if(object.data){
+        playRoom(object.data);
+      }
+    }
+  }
+
+  
   // Render the scene through the manager.
   manager.render(scene, camera, timestamp);
 
@@ -221,10 +371,78 @@ function setStageDimensions(stage) {
   skybox.position.y = boxSize/2;
   scene.add(skybox);
 
+
   // Place the cube in the middle of the scene, at user height.
   cube.position.set(0, controls.userHeight, 0);
 }
 
+
+// var stats = new Stats();
+// stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+// document.body.appendChild( stats.dom );
+
+// function fps() {
+
+//     stats.begin();
+
+//     // monitored code goes here
+
+//     stats.end();
+
+//     requestAnimationFrame( fps );
+
+// }
+
+// requestAnimationFrame( fps );
+
+function playRoom(room){
+  console.log(room);
+  var url="/u/room.api.m.panda.tv/index.php?method=room.shareapi&roomid="+room.id;
+  $.getJSON(url,'',function(json){
+    var urlVideo=json.data.videoinfo.address;
+    urlVideo=urlVideo.replace('http:/','/u');
+    VRhls.loadSource(urlVideo);
+    VRhls.attachMedia(video2);
+  });
+}
+
+</script>
+<video id="video2" hidden="hidden">
+</video>
+<script src="src/hls.min.js"></script>
+<script>
+var VRhls;
+if (Hls.isSupported()) {
+    function playVideo(video){
+      var texture = new THREE.VideoTexture( video );
+      texture.minFilter = THREE.LinearFilter;
+      texture.magFilter = THREE.LinearFilter;
+      texture.format = THREE.RGBFormat;
+
+      texture.wrapS = THREE.ClampToEdgeWrapping;
+      texture.wrapT = THREE.ClampToEdgeWrapping;
+
+      var geometry = new THREE.PlaneGeometry(3, 1.8);
+      var material = new THREE.MeshBasicMaterial({
+        map: texture,
+        color: 0xffffff,
+        side: THREE.DoubleSide
+      });
+      var videoPlane=new THREE.Mesh(geometry, material);
+      videoPlane.position.set(0, controls.userHeight, -1.5);
+      videoPlane.position.x=0;
+      scene.add(videoPlane);
+    }
+    var video2 = document.getElementById('video2');
+    var hls = new Hls();
+    var VRhls=hls;
+    // hls.loadSource('/u/pl-hls8.live.panda.tv/live_panda/b63622ab96fbac35c25915471373d6ab_small.m3u8');
+    hls.attachMedia(video2);
+    hls.on(Hls.Events.MANIFEST_PARSED, function() {
+        video2.play();
+        playVideo(video2);
+    });
+}
 </script>
 
 </html>

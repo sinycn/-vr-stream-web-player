@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # WebVR Boilerplate
 
 A [THREE.js][three]-based starting point for VR experiences that work well in
@@ -68,3 +69,6 @@ The boilerplate is also available via npm. Easy install:
 [spec]: https://mozvr.github.io/webvr-spec/
 [dm]: https://twitter.com/dmarcos
 [doob]: https://twitter.com/mrdoob
+=======
+#vr-stream-web-player
+>>>>>>> 1dd399d3fddb7d5f647d944d8c27a1c7b526175e

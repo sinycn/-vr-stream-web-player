@@ -1,74 +1,58 @@
-<<<<<<< HEAD
-# WebVR Boilerplate
+# VR Stream Web Player (VR直播网页播放器)
 
-A [THREE.js][three]-based starting point for VR experiences that work well in
-both Google Cardboard and other VR headsets. Also provides a fallback for
-experiencing the same content without requiring a VR device.
+##项目介绍
 
-This project relies heavily on the [webvr-polyfill][polyfill] to provide VR
-support if the [WebVR API](spec) is not implemented.
-
-[three]: http://threejs.org/
-[polyfill]: https://github.com/borismus/webvr-polyfill
-
-## Projects that use the webvr-polyfill or webvr-boilerplate
-
-Assorted platforms:
-
-- [A-Frame](https://github.com/aframevr/aframe/) - Building blocks for the
-virtual reality web
-- [Archilogic](http://spaces.archilogic.com/3d/template/new?mode=edit&view-menu=none) - Floor plans into 3D virtual tours
-- [Vizor](http://vizor.io/) - Create and share VR in your browser
-
-Assorted real-world examples:
-
-- [Breakthrough](http://breakthrough.nationalgeographic.com/) - Cutting-edge science that will change our lives in the very near future (by National Geographic)
-- [Chinese New Year](https://chinesenewyear.withgoogle.com/) - Create a virtual lantern and share your wishes (by Google)
-- [Discovering Gale Crater](http://graphics.latimes.com/mars-gale-crater-vr/) - A virtual reality audio tour of the Gale Crater (by LA Times)
-- [Sechelt](https://mozvr.github.io/sechelt/) - A visualization of an inlet near the town of Sechelt, BC (by Mozilla)
-
-Assorted samples:
-
-- [WebVR 1.0 Samples](https://toji.github.io/webvr-samples/) - Simple example applications to demonstrate various aspects of the WebVR API
+利用VR场景作为背景,接入直播视频流,进行在VR场景内观看直播的网页播放器.
 
 
-## Features
+## 项目相关
 
-As of WebVR 1.0, this project relies on the polyfill for even more. Core
-features like [lens distortion][distortion] and device detection have moved into the polyfill.
-This project now acts as a getting started example, and provides a reasonable
-user experience for getting in and out of Virtual Reality and Magic Window
-modes.
+本项目基于VR场景构造github项目 [WebVR Boilerplate][wb].
 
-As a convenience, the WebVRManager emits certain `modechange` events, which can
-be subscribed using `manager.on('modechange', callback)`.
+用 three.js 对VR场景进行构造,利用 [facebook transform][fbtf] 将全景视频转换为 cubemap 视频再进行展示.
+
+利用 [hls.js][hls] 进行H5内播放直播视频.
 
 
-## Getting started
 
-The easiest way to start is to fork this repository or copy its contents into a
-new directory.
+## 直播源
 
-The boilerplate is also available via npm. Easy install:
+本项目现利用 [panda.tv][pd] 获取直播源.调用了部分 [panda.tv][pd] 接口.如有侵权,请联系作者.
 
-    npm install webvr-boilerplate
+因为JS跨域问题,现利用nginx进行反向代理用于访问对应接口及直播源.
+
+部分直播可能有问题.
 
 
-## Thanks
 
-- [Brandon Jones][bj] and [Vladimir Vukicevic][vv] for their work on the [WebVR
-  spec][spec].
-- [Ricardo Cabello][doob] for THREE.js.
-- [Diego Marcos][dm] for VREffect and VRControls.
-- [Dmitriy Kovalev][dk] for help with [lens distortion correction][distortion].
+## H5问题
 
-[dk]: https://github.com/dmitriykovalev/
-[distortion]: https://github.com/borismus/webvr-polyfill/blob/master/src/distortion/distortion.js
-[bj]: https://twitter.com/tojiro
-[vv]: https://twitter.com/vvuk
-[spec]: https://mozvr.github.io/webvr-spec/
-[dm]: https://twitter.com/dmarcos
-[doob]: https://twitter.com/mrdoob
-=======
-#vr-stream-web-player
->>>>>>> 1dd399d3fddb7d5f647d944d8c27a1c7b526175e
+本项目可以适配手机,但在利用作者安卓手机进行视频播放时,视频停格在了某帧后就不能播放.iphone手机上还没进行测试.
+
+在PC端chrome可以流畅播放直播及背景视频. 
+
+## nginx反向代理配置
+
+    resolver 114.114.114.114;
+    location ~* ^/u/(.*)$ {
+        proxy_pass http://$1?$args;
+    }
+       
+
+### 联系作者:Kid Lueng
+
+ e-mail:100520140@qq.com
+
+## 相关项目
+
+- [WebVR Boilerplate][wb]: https://github.com/borismus/webvr-boilerplate
+- [facebook transform][fbtf]: https://github.com/facebook/transform
+- [hls]: https://github.com/dailymotion/hls.js
+- [three.js]: https://threejs.org
+
+
+[wb]: https://github.com/borismus/webvr-boilerplate
+[fbtf]: https://github.com/facebook/transform
+[hls]: https://github.com/dailymotion/hls.js
+[three.js]: https://threejs.org
+[pd]: http://panda.tv
